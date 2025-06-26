@@ -2,6 +2,7 @@
 
 API_URL="https://pokeapi.co/api/v2/pokemon/"
 pokemon_names=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+DELAY_SECONDS=1
 
 for name in "${pokemon_names[@]}"; do
     response=$(curl -s -w "%{http_code}" "${API_URL}${name}")
@@ -14,5 +15,9 @@ for name in "${pokemon_names[@]}"; do
         echo "Saved data to ${name}.json"
     else
         echo "Failed to fetch $name (HTTP $http_code)"
+    fi
+
+    if [ "$name" != "${pokemon_names[-1]}" ]; then
+        sleep $DELAY_SECONDS
     fi
 done
