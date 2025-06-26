@@ -1,0 +1,5 @@
+#!/bin/bash
+
+name=$(jq -r '.name')
+
+echo

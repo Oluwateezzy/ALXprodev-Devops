@@ -7,6 +7,7 @@ response=$(curl -s -w "%{http_code}" "$API_URL")
 http_code=${response: -3}
 
 response_body=${response:0:-3}
+echo "$response_body"
 
 if [ "$http_code" -eq 200 ]; then 
     echo "$response_body" > data.json
