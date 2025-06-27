@@ -7,28 +7,51 @@ PIDS=()
 
 fetch_pokemon() {
     local name=$1
+    local retries=3
+    local attempt=0
+    local success=0
 
-    response=$(curl -s -w "%{http_code}" "${API_URL}${name}")
+    # Retry logic for more robust fetching
+    for attempt in $(seq 1 $retries); do
+        response=$(curl -s -w "%{http_code}" "${API_URL}${name}")
+        http_code=${response: -3}
+        response_body=${response:0:-3}
 
-    http_code=${response: -3}
-    response_body=${response:0:-3}
+        if [ "$http_code" -eq 200 ]; then
+            echo "$response_body" > "${name}.json"
+            echo "Successfully fetched $name (attempt $attempt)"
+            success=1
+            break
+        else
+            echo "Attempt $attempt failed for $name (HTTP $http_code)" >&2
+            sleep 1
+        fi
+    done
 
-    if [ "$http_code" -eq 200 ]; then
-        echo "$response_body" > "${name}.json"
-        echo "Saved data to ${name}.json"
-    else
-        echo "Failed to fetch $name (HTTP $http_code)"
+    if [ $success -eq 0 ]; then
+        echo "Failed to fetch $name after $retries attempts" >&2
+        return 1
     fi
 }
 
+# Fetch all Pokémon in parallel
 for name in "${pokemon_names[@]}"; do
     fetch_pokemon "$name" &
     PIDS+=($!)
     sleep $DELAY_SECONDS
 done
 
+# Wait for all processes to complete and capture failures
+FAILED=0
 for pid in "${PIDS[@]}"; do
-    wait $pid || echo "Process $pid failed" >&2
+    if ! wait $pid; then
+        echo "Background process $pid failed" >&2
+        FAILED=$((FAILED + 1))
+    fi
 done
 
-echo "All Pokémon data fetched"
+if [ $FAILED -eq 0 ]; then
+    echo "All Pokémon data fetched successfully"
+else
+    echo "Warning: Failed to fetch $FAILED Pokémon" >&2
+fi
