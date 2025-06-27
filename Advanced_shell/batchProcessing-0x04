@@ -1,0 +1,34 @@
+
+
+API_URL="https://pokeapi.co/api/v2/pokemon/"
+pokemon_names=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+DELAY_SECONDS=0.5
+PIDS=()
+
+fetch_pokemon() {
+    local name=$1
+
+    response=$(curl -s -w "%{http_code}" "${API_URL}${name}")
+
+    http_code=${response: -3}
+    response_body=${response:0:-3}
+
+    if [ "$http_code" -eq 200 ]; then
+        echo "$response_body" > "${name}.json"
+        echo "Saved data to ${name}.json"
+    else
+        echo "Failed to fetch $name (HTTP $http_code)"
+    fi
+}
+
+for name in "${pokemon_names[@]}"; do
+    fetch_pokemon "$name" &
+    PIDS+=($!)
+    sleep $DELAY_SECONDS
+done
+
+for pid in "${PIDS[@]}"; do
+    wait $pid || echo "Process $pid failed" >&2
+done
+
+echo "All Pokémon data fetched"
